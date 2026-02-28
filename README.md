@@ -47,7 +47,7 @@
 ## 🧠 Coding Activity
 
 <p align="center">
-  <img src="https://github-readme-activity-graph.vercel.app/graph?username=atharvbhavsar99&theme=tokyo-night&hide_border=true" />
+  <img src="https://github-readme-activity-graph.vercel.app/graph?username=atharvbhavsar&theme=tokyo-night&hide_border=true" />
 </p>
 
 
