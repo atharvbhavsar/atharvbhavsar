@@ -1,16 +1,16 @@
-## Hi there 👋
+# Atharv Bhavsar
+## Data Engineer and Web Developer
+I build scalable data pipelines and modern web applications with a focus on efficiency and actionable insights.
 
-<!--
-**atharvbhavsar/atharvbhavsar** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
-
-Here are some ideas to get you started:
-
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+### Skills
+- Python, SQL, JavaScript, HTML, CSS, Data Pipelines
+- - Machine Learning (XGBoost, K-Means), SHAP Explainable AI
+  - - React, Modern Web Frameworks
+   
+    - ### Recent Projects
+    - - **Ciplex-Analyst-2026**: Advanced ML pipeline for customer retention prediction. Features K-Means clustering, hyper-tuned XGBoost, and SHAP explainability for business-driven insights.
+     
+      - ### Currently Learning/Doing
+      - - Building scalable web apps and optimizing data pipelines for high-performance systems.
+        - - Exploring advanced ML interpretability techniques.
+          - 
