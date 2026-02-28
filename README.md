@@ -44,23 +44,12 @@
 
 ---
 
+## 🧠 Coding Activity
 
+<p align="center">
+  <img src="https://github-readme-activity-graph.vercel.app/graph?username=atharvbhavsar99&theme=tokyo-night&hide_border=true" />
+</p>
 
-## 🐍 Contribution Snake
-
-![snake gif](https://github.com/atharvbhavsar99/atharvbhavsar99/blob/output/github-contribution-grid-snake.svg)
-
----
-
-## 🎮 Fun Zone
-
-⚡ I build Data Pipelines by day & Full-Stack apps by night  
-🚀 Love participating in Hackathons  
-🎧 Coding with music ON always  
-🤖 Exploring AI + Distributed Systems  
-🔥 Always building something exciting  
-
----
 
 ## 🌐 Let's Connect
 
@@ -68,11 +57,13 @@
   <a href="https://www.linkedin.com/in/YOUR_LINK/">
     <img src="https://skillicons.dev/icons?i=linkedin" />
   </a>
-  <a href="mailto:YOUR_EMAIL">
+  <a href="mailto:atharvbhavsar99@gmail.com">
     <img src="https://skillicons.dev/icons?i=gmail" />
   </a>
 </p>
 
----
+<p align="center">
+  📧 atharvbhavsar99@gmail.com
+</p>
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:00F7FF,100:6A00FF&height=120&section=footer"/>
+
