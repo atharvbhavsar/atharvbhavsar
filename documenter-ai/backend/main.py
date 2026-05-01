@@ -3,6 +3,7 @@ import re
 import json
 import uuid
 import asyncio
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -37,6 +38,13 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Regex for detecting figure/table retrieval intent (module-level constant)
+# Matches patterns like "show figure 7", "get fig. 3a", "display table 2"
+FIGURE_REQUEST_PATTERN = re.compile(
+    r'(?:show|get|find|display)\s+(?:\w+\s+){0,5}(?:fig(?:ure)?\.?\s*\d+[a-z]?|table\s*\d+[a-z]?)',
+    re.IGNORECASE
+)
 
 app = FastAPI(title="DocuMentor AI", version="1.0.0")
 
@@ -103,11 +111,16 @@ async def upload_document(
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, "Only PDF files are supported")
 
+    # Sanitize filename: keep only safe characters to prevent path traversal
+    safe_filename = re.sub(r'[^\w\s\-.]', '_', os.path.basename(file.filename))
+    if not safe_filename.lower().endswith(".pdf"):
+        safe_filename += ".pdf"
+
     doc_id = str(uuid.uuid4())[:8]
     doc_dir = os.path.join(settings.upload_dir, doc_id)
     os.makedirs(doc_dir, exist_ok=True)
 
-    file_path = os.path.join(doc_dir, file.filename)
+    file_path = os.path.join(doc_dir, safe_filename)
 
     async with aiofiles.open(file_path, "wb") as f:
         content = await file.read()
@@ -117,7 +130,7 @@ async def upload_document(
 
     doc_info = {
         "doc_id": doc_id,
-        "filename": file.filename,
+        "filename": safe_filename,
         "page_count": 0,
         "status": "processing",
         "created_at": datetime.utcnow().isoformat(),
@@ -223,8 +236,7 @@ async def chat(request: ChatRequest):
             raise HTTPException(400, f"Document {doc_id} is not ready yet")
 
     # Check if this is a figure/table retrieval request
-    fig_pattern = r'(?:show|get|find|display).*?(?:fig(?:ure)?\.?\s*(\d+[a-z]?)|table\s*(\d+[a-z]?))'
-    fig_match = re.search(fig_pattern, request.question, re.IGNORECASE)
+    fig_match = FIGURE_REQUEST_PATTERN.search(request.question[:500])
 
     retrieved_images = []
 
@@ -361,11 +373,19 @@ async def explain_image_endpoint(data: dict):
     image_url = data.get("image_url", "")
     context = data.get("context", "")
 
-    # Convert URL to local path
-    if image_url.startswith("/uploads/"):
-        local_path = os.path.join(settings.upload_dir, image_url[len("/uploads/"):])
-    else:
+    # Convert URL to local path and validate it stays within the upload directory
+    if not isinstance(image_url, str) or not image_url.startswith("/uploads/"):
         raise HTTPException(400, "Invalid image URL")
+
+    relative = image_url[len("/uploads/"):]
+    local_path = os.path.realpath(os.path.join(settings.upload_dir, relative))
+    upload_root = os.path.realpath(settings.upload_dir)
+
+    if not local_path.startswith(upload_root + os.sep) and local_path != upload_root:
+        raise HTTPException(400, "Invalid image URL")
+
+    if not os.path.isfile(local_path):
+        raise HTTPException(404, "Image not found")
 
     explanation = retriever.explain_image(local_path, context)
     return {"explanation": explanation}

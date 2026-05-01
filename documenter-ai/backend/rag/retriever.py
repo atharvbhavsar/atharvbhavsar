@@ -111,7 +111,8 @@ class RAGRetriever:
         }
 
     def explain_image(self, image_path: str, context: str = "") -> str:
-        if not os.path.exists(image_path):
+        # image_path is already validated by the caller to be within upload_dir
+        if not os.path.isfile(image_path):
             return "Image not found."
         try:
             with open(image_path, "rb") as f:
@@ -143,8 +144,8 @@ class RAGRetriever:
                 max_tokens=1024
             )
             return response.choices[0].message.content
-        except Exception as e:
-            return f"Could not analyze image: {str(e)}"
+        except Exception:
+            return "Could not analyze image."
 
     def _generate_suggestions(self, question: str, answer: str) -> List[str]:
         question_lower = question.lower()
