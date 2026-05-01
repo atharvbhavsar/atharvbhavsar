@@ -112,11 +112,11 @@ async def upload_document(
         raise HTTPException(400, "Only PDF files are supported")
 
     # Sanitize filename: keep only safe characters to prevent path traversal
-    safe_filename = re.sub(r'[^\w\-.]', '_', os.path.basename(file.filename))
+    safe_filename = re.sub(r'[^\w\-.]', '_', os.path.basename(file.filename or "upload"))
     if not safe_filename.lower().endswith(".pdf"):
         safe_filename += ".pdf"
 
-    doc_id = str(uuid.uuid4())[:8]
+    doc_id = str(uuid.uuid4())[:8].lower()  # ensure lowercase hex for consistent validation
     doc_dir = os.path.join(settings.upload_dir, doc_id)
     os.makedirs(doc_dir, exist_ok=True)
 
@@ -241,7 +241,7 @@ async def chat(request: ChatRequest):
             raise HTTPException(400, f"Document {doc_id} is not ready yet")
 
     # Check if this is a figure/table retrieval request
-    fig_match = FIGURE_REQUEST_PATTERN.search(request.question[:500])
+    fig_match = FIGURE_REQUEST_PATTERN.search(request.question[:200])
 
     retrieved_images = []
 
@@ -378,22 +378,36 @@ async def explain_image_endpoint(data: dict):
     image_url = data.get("image_url", "")
     context = data.get("context", "")
 
-    # Convert URL to local path and validate it stays within the upload directory
     if not isinstance(image_url, str) or not image_url.startswith("/uploads/"):
         raise HTTPException(400, "Invalid image URL")
 
-    relative = image_url[len("/uploads/"):]
-    local_path = os.path.realpath(os.path.join(settings.upload_dir, relative))
-    upload_root = os.path.realpath(settings.upload_dir)
+    # Resolve image path from our internal registry (not from user-supplied URL directly)
+    # URL format: /uploads/{doc_id}/images/{filename}
+    parts = image_url[len("/uploads/"):].split("/", 1)
+    if len(parts) < 2:
+        raise HTTPException(400, "Invalid image URL")
+    doc_id_from_url = parts[0]
 
-    if not local_path.startswith(upload_root + os.sep) and local_path != upload_root:
+    # Validate doc_id format
+    if not re.fullmatch(r'[a-fA-F0-9]{8}', doc_id_from_url):
         raise HTTPException(400, "Invalid image URL")
 
-    if not os.path.isfile(local_path):
+    if doc_id_from_url not in documents:
+        raise HTTPException(404, "Document not found")
+
+    # Find matching image in the registry (path is stored, not derived from user input)
+    target_filename = os.path.basename(parts[1]) if "/" in parts[1] else parts[1]
+    stored_path = None
+    for img in documents[doc_id_from_url].get("images", []):
+        if img.get("image_filename") == target_filename:
+            stored_path = img["image_path"]
+            break
+
+    if stored_path is None or not os.path.isfile(stored_path):
         raise HTTPException(404, "Image not found")
 
-    # Read file bytes here (path already validated above) and pass to retriever
-    with open(local_path, "rb") as img_file:
+    # Read bytes from the registry-stored path (fully internal, not user-tainted)
+    with open(stored_path, "rb") as img_file:
         image_bytes = img_file.read()
 
     explanation = retriever.explain_image_bytes(image_bytes, context)
