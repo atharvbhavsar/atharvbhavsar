@@ -112,7 +112,7 @@ async def upload_document(
         raise HTTPException(400, "Only PDF files are supported")
 
     # Sanitize filename: keep only safe characters to prevent path traversal
-    safe_filename = re.sub(r'[^\w\s\-.]', '_', os.path.basename(file.filename))
+    safe_filename = re.sub(r'[^\w\-.]', '_', os.path.basename(file.filename))
     if not safe_filename.lower().endswith(".pdf"):
         safe_filename += ".pdf"
 
@@ -207,16 +207,21 @@ async def get_document(doc_id: str):
 
 @app.delete("/api/documents/{doc_id}")
 async def delete_document(doc_id: str):
+    # Validate doc_id is a safe alphanumeric identifier (no path traversal)
+    if not re.fullmatch(r'[a-f0-9]{8}', doc_id):
+        raise HTTPException(400, "Invalid document ID")
     if doc_id not in documents:
         raise HTTPException(404, "Document not found")
 
     # Delete from vector store
     vector_store.delete_document(doc_id)
 
-    # Delete files
+    # Delete files — doc_dir is derived from our own generated doc_id (UUID prefix)
     doc_dir = os.path.join(settings.upload_dir, doc_id)
-    if os.path.exists(doc_dir):
-        shutil.rmtree(doc_dir)
+    real_doc_dir = os.path.realpath(doc_dir)
+    upload_root = os.path.realpath(settings.upload_dir)
+    if real_doc_dir.startswith(upload_root + os.sep) and os.path.exists(real_doc_dir):
+        shutil.rmtree(real_doc_dir)
 
     del documents[doc_id]
     save_registry()
@@ -387,7 +392,11 @@ async def explain_image_endpoint(data: dict):
     if not os.path.isfile(local_path):
         raise HTTPException(404, "Image not found")
 
-    explanation = retriever.explain_image(local_path, context)
+    # Read file bytes here (path already validated above) and pass to retriever
+    with open(local_path, "rb") as img_file:
+        image_bytes = img_file.read()
+
+    explanation = retriever.explain_image_bytes(image_bytes, context)
     return {"explanation": explanation}
 
 

@@ -99,8 +99,8 @@ class RAGRetriever:
                     temperature=0.3
                 )
                 answer = response.choices[0].message.content
-            except Exception as e2:
-                answer = f"I found relevant content but encountered an error generating the response: {str(e2)}"
+            except Exception:
+                answer = "I found relevant content but encountered an error generating the response. Please try again."
 
         # Generate smart suggestions
         suggestions = self._generate_suggestions(question, answer)
@@ -110,42 +110,52 @@ class RAGRetriever:
             "suggestions": suggestions
         }
 
+    def explain_image_bytes(self, image_bytes: bytes, context: str = "") -> str:
+        """Explain an image provided as bytes (path already validated by caller)."""
+        try:
+            b64 = base64.b64encode(image_bytes).decode()
+            return self._explain_b64(b64, context)
+        except Exception:
+            return "Could not analyze image."
+
     def explain_image(self, image_path: str, context: str = "") -> str:
-        # image_path is already validated by the caller to be within upload_dir
+        """Explain an image at a trusted internal path (must be pre-validated by caller)."""
         if not os.path.isfile(image_path):
             return "Image not found."
         try:
             with open(image_path, "rb") as f:
                 b64 = base64.b64encode(f.read()).decode()
-
-            messages = [
-                {
-                    "role": "system",
-                    "content": "You are an expert at analyzing technical diagrams, figures, and charts. Provide detailed, accurate explanations."
-                },
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": f"Please analyze and explain this image/diagram in detail.{' Context: ' + context if context else ''}"
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/png;base64,{b64}", "detail": "high"}
-                        }
-                    ]
-                }
-            ]
-
-            response = self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=messages,
-                max_tokens=1024
-            )
-            return response.choices[0].message.content
+            return self._explain_b64(b64, context)
         except Exception:
             return "Could not analyze image."
+
+    def _explain_b64(self, b64: str, context: str) -> str:
+        messages = [
+            {
+                "role": "system",
+                "content": "You are an expert at analyzing technical diagrams, figures, and charts. Provide detailed, accurate explanations."
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"Please analyze and explain this image/diagram in detail.{' Context: ' + context if context else ''}"
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{b64}", "detail": "high"}
+                    }
+                ]
+            }
+        ]
+
+        response = self.client.chat.completions.create(
+            model="gpt-4o",
+            messages=messages,
+            max_tokens=1024
+        )
+        return response.choices[0].message.content
 
     def _generate_suggestions(self, question: str, answer: str) -> List[str]:
         question_lower = question.lower()
