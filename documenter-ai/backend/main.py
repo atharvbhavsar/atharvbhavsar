@@ -389,7 +389,7 @@ async def explain_image_endpoint(data: dict):
     doc_id_from_url = parts[0]
 
     # Validate doc_id format
-    if not re.fullmatch(r'[a-fA-F0-9]{8}', doc_id_from_url):
+    if not re.fullmatch(r'[a-f0-9]{8}', doc_id_from_url):
         raise HTTPException(400, "Invalid image URL")
 
     if doc_id_from_url not in documents:
